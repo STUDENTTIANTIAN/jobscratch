@@ -31,3 +31,7 @@ uv run python jobscratch/jobscratch.py --input <列表文件.json> --detail
 
 - 必须先在专用 Chrome 中登录 zhipin.com
 - 控制抓取频率，避免风控
+
+## 致谢
+
+本项目参考自 [eatmoreduck/boss-zhipin-scraper](https://github.com/eatmoreduck/boss-zhipin-scraper)，感谢作者在 CDP / Chrome 隔离 / 登录探测等经验密集型设计上的分享。
