@@ -514,11 +514,11 @@ EXTRACT_DETAIL_JS = """
     var jd = '';
     var sections = document.querySelectorAll('.job-detail-section, .job-sec');
     for (var i = 0; i < sections.length; i++) {
-        var text = (sections[i].innerText || '').trim();
-        if (text.indexOf('职位描述') !== -1 && text.length > jd.length) {
-            jd = text;
-        }
+        var text = sections[i].innerText.trim();
+        if (text.length > jd.length) jd = text;
     }
+    var idx = jd.indexOf('举报');
+    if (idx !== -1) jd = jd.slice(idx + 2).replace(/^\s+/, '');
     return JSON.stringify({
         jd: jd,
         page_text: pageText.substring(0, 12000),
@@ -648,8 +648,6 @@ def extract_detail_fields(extracted, min_length=MIN_DETAIL_TEXT_LENGTH):
     text = raw_jd
     if not text and DETAIL_DESCRIPTION_MARKER in page_text:
         text = page_text
-    if DETAIL_DESCRIPTION_MARKER in text:
-        text = text.split(DETAIL_DESCRIPTION_MARKER, 1)[1]
 
     lines = text.replace("\r\n", "\n").splitlines()
     footer_start, boss_active_status = _recruiter_footer_info(lines)
