@@ -47,6 +47,13 @@ from urllib.request import Request, urlopen
 websocket = None
 requests = None
 
+if sys.platform == "win32":
+    for _stream in (sys.stdout, sys.stderr):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, OSError):
+            pass
+
 # ============================================================
 # 全局常量
 # ============================================================
@@ -487,7 +494,7 @@ class DetailLoginRequiredError(DetailExtractionError):
     """The detail page is truncated because the BOSS session is not logged in."""
 
 
-EXTRACT_DETAIL_JS = """
+EXTRACT_DETAIL_JS = r"""
 (function(){
     var pageText = document.body ? document.body.innerText : '';
     var tags = [];
