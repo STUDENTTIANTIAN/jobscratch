@@ -2404,6 +2404,8 @@ def main():
     p.add_argument("--no-detail", dest="detail", action="store_false", help="不抓取详情页")
     p.add_argument("--max-details", type=int, default=None, help="最多抓几个详情")
     p.add_argument("--analysis", action="store_true", help="输出分析报告")
+    p.add_argument("--llm-analyze", action="store_true",
+                   help="用大模型分析岗位详情,输出技能学习报告(需配置 LLM JSON)")
     p.add_argument("--input", default=None, help="从已有 JSON 文件读取（跳过抓取）")
     p.add_argument("--allow-dom-fallback", action="store_true",
                    help="API 无数据时允许降级 DOM 提取（薪资可能受字体反爬影响，默认关闭）")
@@ -2560,6 +2562,24 @@ def main():
         if not details:
             details = load_existing_details(args.input, args.detail_output)
         analyze(list_data, details, search_keyword=args.keyword)
+
+    # LLM 技能分析(agent 编排层,失败不阻塞现有功能)
+    if args.llm_analyze:
+        try:
+            from .skill_analysis import run_llm_skill_analysis, load_all_details
+            llm_details = details or load_all_details()
+            if not llm_details:
+                print("❌ 没有详情数据,请先抓取: --keyword ... --detail")
+                sys.exit(1)
+            report_path = run_llm_skill_analysis(
+                llm_details,
+                jobs=list_data.get("jobs") if list_data else None,
+                keyword=args.keyword,
+            )
+            print(f"报告: {report_path}")
+        except Exception as e:
+            print(f"❌ LLM 分析失败: {e}")
+            print("   数据仍可用现有 --analysis 做词频分析,不相互影响")
 
     # 抓取正常结束后按需收尾（仅成功路径；异常/登录失败走 sys.exit，不会触发，保留登录态）
     if args.close_chrome:

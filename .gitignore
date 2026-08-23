@@ -21,3 +21,7 @@ Thumbs.db
 
 # 内部文档（设计/思考笔记，不公开）
 doc/
+
+# LLM 配置（含真实 API key，不上传）
+jobscratch/llm_config.json
+llm_config.json
