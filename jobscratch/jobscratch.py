@@ -2406,6 +2406,16 @@ def main():
     p.add_argument("--analysis", action="store_true", help="输出分析报告")
     p.add_argument("--llm-analyze", action="store_true",
                    help="用大模型分析岗位详情,输出技能学习报告(需配置 LLM JSON)")
+    p.add_argument("--decompose", action="store_true",
+                   help="阶段①:LangGraph agent 把 JD 拆解成技能点,落盘 skills_*.json")
+    p.add_argument("--categorize", action="store_true",
+                   help="阶段②:LangGraph agent 把 title 归类成职业大类,落盘 categories_*.json")
+    p.add_argument("--stats", action="store_true",
+                   help="阶段②:统计 职业×技能 频次,落盘 stats_*.json")
+    p.add_argument("--report", action="store_true",
+                   help="阶段③:生成 ECharts 力导向图 report.html(双击打开)")
+    p.add_argument("--min-count", type=int, default=2,
+                   help="report 图表过滤:全局频率低于该值的技能不显示(默认 2)")
     p.add_argument("--input", default=None, help="从已有 JSON 文件读取（跳过抓取）")
     p.add_argument("--allow-dom-fallback", action="store_true",
                    help="API 无数据时允许降级 DOM 提取（薪资可能受字体反爬影响，默认关闭）")
@@ -2465,6 +2475,60 @@ def main():
         sys.exit(1)
 
     # 抓取前校验城市，避免无效中文名被原样作为 city 参数继续请求。
+    # 阶段①:JD 技能拆解(LangGraph agent,无需登录/网络,直接读已有详情)
+    if args.decompose:
+        from .agent import run_decompose
+        from .skill_analysis import load_all_details
+        llm_details = load_all_details()
+        if not llm_details:
+            print("❌ 没有详情数据,请先抓取: --keyword ... --detail")
+            sys.exit(1)
+        try:
+            skills_path = run_decompose(llm_details, keyword=args.keyword)
+            print(f"技能拆解完成: {skills_path}")
+        except RuntimeError as e:
+            print(f"❌ {e}")
+            sys.exit(1)
+        sys.exit(0)
+
+    # 阶段②:title → 职业大类(LangGraph agent,基于已有 skills)
+    if args.categorize:
+        from .agent import run_categorize
+        from .stats import load_latest_skills
+        skills, _ = load_latest_skills()
+        if not skills:
+            print("❌ 没有 skills 数据,请先跑 --decompose")
+            sys.exit(1)
+        try:
+            categories_path = run_categorize(skills, keyword=args.keyword)
+            print(f"归类完成: {categories_path}")
+        except RuntimeError as e:
+            print(f"❌ {e}")
+            sys.exit(1)
+        sys.exit(0)
+
+    # 阶段②:频率统计(纯代码,基于 skills + categories)
+    if args.stats:
+        from .stats import run_stats
+        try:
+            stats_path = run_stats()
+            print(f"统计完成: {stats_path}")
+        except RuntimeError as e:
+            print(f"❌ {e}")
+            sys.exit(1)
+        sys.exit(0)
+
+    # 阶段③:可视化(纯代码,基于 stats)
+    if args.report:
+        from .report import run_report
+        try:
+            report_path = run_report(min_count=args.min_count)
+            print(f"报告: {report_path}")
+        except RuntimeError as e:
+            print(f"❌ {e}")
+            sys.exit(1)
+        sys.exit(0)
+
     if not args.input:
         try:
             resolve_city(args.city)
