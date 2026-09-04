@@ -997,9 +997,11 @@ def check_login_state(cdp_port=DEFAULT_CDP_PORT):
         cdp = CDPSession(cdp_port)
         tid, sid = create_page_session(cdp)
 
-        # 先导航到 BOSS直聘，确保 cookie 域名正确
-        cdp.send("Page.navigate", {"url": "https://www.zhipin.com/"}, sid)
-        time.sleep(4)
+        # 导航到搜索页(而非首页):BOSS 的环境安全验证只在搜索页导航时触发,
+        # 不完成验证则接口一律返回 code:37。等足时间让验证 + 页面就绪。
+        probe_url = build_search_url(LOGIN_PROBE_QUERY, LOGIN_PROBE_CITY, 1, {})
+        cdp.send("Page.navigate", {"url": probe_url}, sid)
+        time.sleep(8)
 
         return probe_login_state(cdp, sid)
     except (requests.ConnectionError, requests.Timeout, KeyError,

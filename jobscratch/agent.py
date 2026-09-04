@@ -340,6 +340,7 @@ def run_decompose(details: list[dict], keyword: str = "") -> str:
     """阶段①入口:跑 LangGraph 拆解并落盘。返回 skills 文件路径。
 
     自动续传:已有 skills_partial.json 时跳过已成功的 job_id,只补失败/未拆条目。
+    同时落盘归类结果(categories),供 stats 使用。
     """
     prev_skills, prev_failed = load_partial_skills()
     graph = build_agent()
@@ -352,6 +353,9 @@ def run_decompose(details: list[dict], keyword: str = "") -> str:
     skills = result.get("skills") or []
     if not skills:
         raise RuntimeError("拆解结果为空(可能详情数据为空或全部失败)")
+    categories = result.get("categories") or []
+    if categories:
+        save_categories(categories, keyword)
     return save_skills(skills, result.get("failed", []), keyword)
 
 
